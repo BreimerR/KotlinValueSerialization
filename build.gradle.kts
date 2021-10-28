@@ -38,5 +38,6 @@ configurations.all {
 allprojects {
     repositories {
         mavenCentral()
+        mavenLocal()
     }
 }

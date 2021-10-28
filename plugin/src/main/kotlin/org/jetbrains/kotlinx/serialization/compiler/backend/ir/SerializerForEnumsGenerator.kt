@@ -22,13 +22,13 @@ import org.jetbrains.kotlin.ir.util.properties
 import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.resolve.BindingContext
 import org.jetbrains.kotlin.resolve.descriptorUtil.fqNameSafe
-import org.jetbrains.kotlinx.serialization.compiler.extensions.SerializationPluginContext
+import org.jetbrains.kotlinx.serialization.compiler.extensions.ValueSerializationPluginContext
 import org.jetbrains.kotlinx.serialization.compiler.resolve.*
 
 @ObsoleteDescriptorBasedAPI
 class SerializerForEnumsGenerator(
     irClass: IrClass,
-    compilerContext: SerializationPluginContext,
+    compilerContext: ValueSerializationPluginContext,
     bindingContext: BindingContext,
     serialInfoJvmGenerator: SerialInfoImplJvmIrGenerator,
 ) : SerializerIrGenerator(irClass, compilerContext, bindingContext, null, serialInfoJvmGenerator) {

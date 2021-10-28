@@ -32,7 +32,7 @@ import org.jetbrains.kotlin.utils.addToStdlib.cast
 import org.jetbrains.kotlinx.serialization.compiler.backend.common.SerialTypeInfo
 import org.jetbrains.kotlinx.serialization.compiler.backend.common.SerializerCodegen
 import org.jetbrains.kotlinx.serialization.compiler.extensions.SerializationDescriptorSerializerPlugin
-import org.jetbrains.kotlinx.serialization.compiler.extensions.SerializationPluginContext
+import org.jetbrains.kotlinx.serialization.compiler.extensions.ValueSerializationPluginContext
 import org.jetbrains.kotlinx.serialization.compiler.resolve.*
 import org.jetbrains.kotlinx.serialization.compiler.resolve.SerialEntityNames.DECODER_CLASS
 import org.jetbrains.kotlinx.serialization.compiler.resolve.SerialEntityNames.ENCODER_CLASS
@@ -48,7 +48,7 @@ internal typealias FunctionWithArgs = Pair<IrFunctionSymbol, List<IrExpression>>
 @ObsoleteDescriptorBasedAPI
 open class SerializerIrGenerator(
     val irClass: IrClass,
-    final override val compilerContext: SerializationPluginContext,
+    final override val compilerContext: ValueSerializationPluginContext,
     bindingContext: BindingContext,
     metadataPlugin: SerializationDescriptorSerializerPlugin?,
     private val serialInfoJvmGenerator: SerialInfoImplJvmIrGenerator,
@@ -561,7 +561,7 @@ open class SerializerIrGenerator(
     companion object {
         fun generate(
             irClass: IrClass,
-            context: SerializationPluginContext,
+            context: ValueSerializationPluginContext,
             bindingContext: BindingContext,
             metadataPlugin: SerializationDescriptorSerializerPlugin?,
             serialInfoJvmGenerator: SerialInfoImplJvmIrGenerator,

@@ -19,7 +19,7 @@ import org.jetbrains.kotlin.ir.util.defaultType
 import org.jetbrains.kotlin.ir.util.kotlinFqName
 import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.resolve.DescriptorUtils
-import org.jetbrains.kotlinx.serialization.compiler.extensions.SerializationPluginContext
+import org.jetbrains.kotlinx.serialization.compiler.extensions.ValueSerializationPluginContext
 import org.jetbrains.kotlinx.serialization.compiler.resolve.SerialEntityNames
 
 // This doesn't support annotation arguments of type KClass and Array<KClass> because the codegen doesn't compute JVM signatures for
@@ -28,9 +28,9 @@ import org.jetbrains.kotlinx.serialization.compiler.resolve.SerialEntityNames
 // TODO: support annotation properties of types KClass<...> and Array<KClass<...>>.
 @ObsoleteDescriptorBasedAPI
 class SerialInfoImplJvmIrGenerator(
-    private val context: SerializationPluginContext,
+    private val context: ValueSerializationPluginContext,
 ) : IrBuilderExtension {
-    override val compilerContext: SerializationPluginContext
+    override val compilerContext: ValueSerializationPluginContext
         get() = context
 
     private val jvmNameClass get() = context.referenceClass(DescriptorUtils.JVM_NAME)!!.owner

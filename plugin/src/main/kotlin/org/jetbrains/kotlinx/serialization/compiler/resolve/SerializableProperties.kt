@@ -5,13 +5,18 @@
 
 package org.jetbrains.kotlinx.serialization.compiler.resolve
 
+import kotlinx.serialization.Transient
+import libetal.kotlinx.serialization.annotations.Serialize
+import libetal.kotlinx.compiler.plugins.extensions.annotatedWith
+import libetal.kotlinx.compiler.plugins.extensions.fqName
+import libetal.kotlinx.compiler.plugins.extensions.hasAnnotation
 import org.jetbrains.kotlin.descriptors.*
 import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.psi.KtDeclarationWithInitializer
 import org.jetbrains.kotlin.psi.KtParameter
 import org.jetbrains.kotlin.resolve.BindingContext
+import org.jetbrains.kotlin.resolve.descriptorUtil.fqNameSafe
 import org.jetbrains.kotlin.resolve.descriptorUtil.getSuperClassNotAny
-import org.jetbrains.kotlin.resolve.hasBackingField
 import org.jetbrains.kotlin.resolve.scopes.DescriptorKindFilter
 import org.jetbrains.kotlin.resolve.source.getPsi
 import org.jetbrains.kotlin.serialization.deserialization.descriptors.DeserializedClassDescriptor
@@ -20,6 +25,7 @@ import org.jetbrains.kotlin.serialization.deserialization.getName
 import org.jetbrains.kotlinx.serialization.compiler.diagnostic.SERIALIZABLE_PROPERTIES
 import org.jetbrains.kotlinx.serialization.compiler.extensions.SerializationDescriptorSerializerPlugin
 import org.jetbrains.kotlinx.serialization.compiler.extensions.SerializationPluginMetadataExtension
+import java.lang.Exception
 
 class SerializableProperties(private val serializableClass: ClassDescriptor, val bindingContext: BindingContext) {
     private val primaryConstructorParameters: List<ValueParameterDescriptor> =
@@ -31,8 +37,9 @@ class SerializableProperties(private val serializableClass: ClassDescriptor, val
 
 
     init {
-        val descriptorsSequence = serializableClass.unsubstitutedMemberScope.getContributedDescriptors(DescriptorKindFilter.VARIABLES)
-            .asSequence()
+        val descriptorsSequence =
+            serializableClass.unsubstitutedMemberScope.getContributedDescriptors(DescriptorKindFilter.VARIABLES)
+                .asSequence()
         // call to any BindingContext.get should be only AFTER MemberScope.getContributedDescriptors
         primaryConstructorProperties =
             primaryConstructorParameters.asSequence()
@@ -40,29 +47,51 @@ class SerializableProperties(private val serializableClass: ClassDescriptor, val
                 .mapNotNull { (a, b) -> if (a == null) null else a to b }
                 .toMap()
 
-        fun isPropSerializable(it: PropertyDescriptor) =
-            if (serializableClass.isInternalSerializable) !it.annotations.serialTransient
+        fun isPropSerializable(it: PropertyDescriptor): Boolean {
+
+            var boolean = if (serializableClass.isInternalSerializable) !it.annotations.serialTransient
             else !DescriptorVisibilities.isPrivate(it.visibility) && ((it.isVar && !it.annotations.serialTransient) || primaryConstructorProperties.contains(
                 it
             ))
 
-        serializableProperties = descriptorsSequence.filterIsInstance<PropertyDescriptor>()
-            .filter { it.kind == CallableMemberDescriptor.Kind.DECLARATION }
-            .filter(::isPropSerializable)
-            .map { prop ->
-                val declaresDefaultValue = prop.declaresDefaultValue()
-                SerializableProperty(
-                    prop,
-                    primaryConstructorProperties[prop] ?: false,
-                    prop.hasBackingField(bindingContext) || (prop is DeserializedPropertyDescriptor && prop.backingField != null) // workaround for TODO in .hasBackingField
-                            // workaround for overridden getter (val) and getter+setter (var) - in this case hasBackingField returning false
-                            // but initializer presents only for property with backing field
-                            || declaresDefaultValue,
-                    declaresDefaultValue
+
+            if (boolean && !it.hasAnnotation<Transient>()) {
+                val string = it.annotations.map { it.fqName?.asString() ?: "" }
+                throw Exception(
+                    "Variable Annotated with transient $string ${it.name} ${it.dispatchReceiverParameter?.fqNameSafe} ${
+                        it.annotations.hasAnnotation(
+                            Transient::class.fqName!!
+                        )
+                    }"
                 )
             }
-            .filterNot { it.transient }
-            .partition { primaryConstructorProperties.contains(it.descriptor) }
+
+            return boolean
+        }
+
+
+        val mutableSerializableProperties  = mutableListOf<SerializableProperty>()
+
+        descriptorsSequence.annotatedWith<Serialize> { annotationDescriptor, declarationDescriptor ->
+            when (declarationDescriptor) {
+                is PropertyDescriptor -> {
+                    val declaresDefaultValue = declarationDescriptor.declaresDefaultValue()
+
+                    mutableSerializableProperties.add(
+                        SerializableProperty(
+                            declarationDescriptor,
+                            primaryConstructorProperties[declarationDescriptor] ?: false,
+                            true,
+                            declaresDefaultValue
+
+                        )
+                    )
+                }
+            }
+        }
+
+
+        serializableProperties =  mutableSerializableProperties.partition { primaryConstructorProperties.contains(it.descriptor)  }
             .run {
                 val supers = serializableClass.getSuperClassNotAny()
                 if (supers == null || !supers.isInternalSerializable)
@@ -93,7 +122,7 @@ class SerializableProperties(private val serializableClass: ClassDescriptor, val
         ?.original?.valueParameters?.any { it.declaresDefaultValue() } ?: false
 }
 
-fun PropertyDescriptor.declaresDefaultValue(): Boolean{
+fun PropertyDescriptor.declaresDefaultValue(): Boolean {
     when (val declaration = this.source.getPsi()) {
         is KtDeclarationWithInitializer -> return declaration.initializer != null
         is KtParameter -> return declaration.defaultValue != null
@@ -144,7 +173,10 @@ internal val SerializableProperties.goldenMaskList: List<Int>
 internal fun List<SerializableProperty>.bitMaskSlotCount() = size / 32 + 1
 internal fun bitMaskSlotAt(propertyIndex: Int) = propertyIndex / 32
 
-internal fun BindingContext.serializablePropertiesFor(classDescriptor: ClassDescriptor, serializationDescriptorSerializer: SerializationDescriptorSerializerPlugin? = null): SerializableProperties {
+internal fun BindingContext.serializablePropertiesFor(
+    classDescriptor: ClassDescriptor,
+    serializationDescriptorSerializer: SerializationDescriptorSerializerPlugin? = null
+): SerializableProperties {
     val props = this.get(SERIALIZABLE_PROPERTIES, classDescriptor) ?: SerializableProperties(classDescriptor, this)
     serializationDescriptorSerializer?.putIfNeeded(classDescriptor, props)
     return props
@@ -152,8 +184,9 @@ internal fun BindingContext.serializablePropertiesFor(classDescriptor: ClassDesc
 
 private fun unsort(descriptor: ClassDescriptor, props: List<SerializableProperty>): List<SerializableProperty> {
     if (descriptor !is DeserializedClassDescriptor) return props
-    val correctOrder: List<Name> = descriptor.classProto.getExtension(SerializationPluginMetadataExtension.propertiesNamesInProgramOrder)
-        .map { descriptor.c.nameResolver.getName(it) }
+    val correctOrder: List<Name> =
+        descriptor.classProto.getExtension(SerializationPluginMetadataExtension.propertiesNamesInProgramOrder)
+            .map { descriptor.c.nameResolver.getName(it) }
     val propsMap = props.associateBy { it.descriptor.name }
     return correctOrder.map { propsMap.getValue(it) }
 }

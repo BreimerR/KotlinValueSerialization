@@ -37,7 +37,7 @@ import org.jetbrains.kotlin.types.typeUtil.*
 import org.jetbrains.kotlin.util.OperatorNameConventions
 import org.jetbrains.kotlinx.serialization.compiler.backend.common.*
 import org.jetbrains.kotlinx.serialization.compiler.backend.jvm.*
-import org.jetbrains.kotlinx.serialization.compiler.extensions.SerializationPluginContext
+import org.jetbrains.kotlinx.serialization.compiler.extensions.ValueSerializationPluginContext
 import org.jetbrains.kotlinx.serialization.compiler.resolve.*
 import org.jetbrains.kotlinx.serialization.compiler.resolve.SerializationDependencies.FUNCTION0_FQ
 import org.jetbrains.kotlinx.serialization.compiler.resolve.SerializationDependencies.LAZY_FQ
@@ -47,7 +47,7 @@ import org.jetbrains.kotlinx.serialization.compiler.resolve.SerializationDepende
 
 @ObsoleteDescriptorBasedAPI
 interface IrBuilderExtension {
-    val compilerContext: SerializationPluginContext
+    val compilerContext: ValueSerializationPluginContext
 
     private val throwMissedFieldExceptionFunc
         get() = compilerContext.referenceFunctions(SerialEntityNames.SINGLE_MASK_FIELD_MISSING_FUNC_FQ).singleOrNull()
@@ -792,7 +792,7 @@ interface IrBuilderExtension {
             val expression =
                 if (rawExpression is IrGetValueImpl && rawExpression.origin == IrStatementOrigin.INITIALIZE_PROPERTY_FROM_PARAMETER) {
                     // this is a primary constructor property, use corresponding default of value parameter
-                    defaultsMap.getValue(rawExpression.symbol.descriptor as ParameterDescriptor)!!
+                    defaultsMap.getValue(rawExpression.symbol.descriptor as ParameterDescriptor) ?: rawExpression
                 } else {
                     rawExpression
                 }

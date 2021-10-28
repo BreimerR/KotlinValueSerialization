@@ -27,7 +27,7 @@ import org.jetbrains.kotlin.util.collectionUtils.filterIsInstanceAnd
 import org.jetbrains.kotlin.utils.getOrPutNullable
 import org.jetbrains.kotlinx.serialization.compiler.backend.common.*
 import org.jetbrains.kotlinx.serialization.compiler.diagnostic.serializableAnnotationIsUseless
-import org.jetbrains.kotlinx.serialization.compiler.extensions.SerializationPluginContext
+import org.jetbrains.kotlinx.serialization.compiler.extensions.ValueSerializationPluginContext
 import org.jetbrains.kotlinx.serialization.compiler.resolve.*
 import org.jetbrains.kotlinx.serialization.compiler.resolve.SerialEntityNames.CACHED_DESCRIPTOR_FIELD_NAME
 import org.jetbrains.kotlinx.serialization.compiler.resolve.SerialEntityNames.MISSING_FIELD_EXC
@@ -36,7 +36,7 @@ import org.jetbrains.kotlinx.serialization.compiler.resolve.SerialEntityNames.SE
 @ObsoleteDescriptorBasedAPI
 class SerializableIrGenerator(
     val irClass: IrClass,
-    override val compilerContext: SerializationPluginContext,
+    override val compilerContext: ValueSerializationPluginContext,
     bindingContext: BindingContext
 ) : SerializableCodegen(irClass.descriptor, bindingContext), IrBuilderExtension {
 
@@ -87,8 +87,14 @@ class SerializableIrGenerator(
                             // skip transient lateinit or deferred properties (with null initializer)
                             val expression = initializerAdapter(it.backingField!!.initializer!!)
 
-                            statementsAfterSerializableProperty.getOrPutNullable(current, { mutableListOf() })
-                                .add(irSetField(irGet(thiz), it.backingField!!, expression))
+                            it.backingField?.let { backingField ->
+
+                                val context = this
+                                val irSetField = irSetField(irGet(thiz), backingField, expression)
+
+                                statementsAfterSerializableProperty.getOrPutNullable(current, { mutableListOf() })
+                                    .add(irSetField)
+                            }
                         }
                     }
                     it is IrAnonymousInitializer -> {
@@ -374,7 +380,7 @@ class SerializableIrGenerator(
     companion object {
         fun generate(
             irClass: IrClass,
-            context: SerializationPluginContext,
+            context: ValueSerializationPluginContext,
             bindingContext: BindingContext
         ) {
             val serializableClass = irClass.descriptor

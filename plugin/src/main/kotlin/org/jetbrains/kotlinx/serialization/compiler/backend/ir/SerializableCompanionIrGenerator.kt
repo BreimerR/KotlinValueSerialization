@@ -9,7 +9,6 @@ import org.jetbrains.kotlin.descriptors.*
 import org.jetbrains.kotlin.incremental.components.NoLookupLocation
 import org.jetbrains.kotlin.ir.ObsoleteDescriptorBasedAPI
 import org.jetbrains.kotlin.ir.builders.*
-import org.jetbrains.kotlin.ir.builders.declarations.*
 import org.jetbrains.kotlin.ir.declarations.IrClass
 import org.jetbrains.kotlin.ir.declarations.IrSimpleFunction
 import org.jetbrains.kotlin.ir.expressions.IrExpression
@@ -24,20 +23,20 @@ import org.jetbrains.kotlin.resolve.descriptorUtil.module
 import org.jetbrains.kotlin.util.collectionUtils.filterIsInstanceAnd
 import org.jetbrains.kotlinx.serialization.compiler.backend.common.SerializableCompanionCodegen
 import org.jetbrains.kotlinx.serialization.compiler.backend.common.findTypeSerializer
-import org.jetbrains.kotlinx.serialization.compiler.extensions.SerializationPluginContext
+import org.jetbrains.kotlinx.serialization.compiler.extensions.ValueSerializationPluginContext
 import org.jetbrains.kotlinx.serialization.compiler.resolve.*
 
 @ObsoleteDescriptorBasedAPI
 class SerializableCompanionIrGenerator(
     val irClass: IrClass,
-    override val compilerContext: SerializationPluginContext,
+    override val compilerContext: ValueSerializationPluginContext,
     bindingContext: BindingContext
 ) : SerializableCompanionCodegen(irClass.descriptor, bindingContext), IrBuilderExtension {
 
     companion object {
         fun generate(
             irClass: IrClass,
-            context: SerializationPluginContext,
+            context: ValueSerializationPluginContext,
             bindingContext: BindingContext
         ) {
             val companionDescriptor = irClass.descriptor

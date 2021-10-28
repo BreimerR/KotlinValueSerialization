@@ -42,11 +42,13 @@ fun ClassLoweringPass.runOnFileInOrder(irFile: IrFile) {
 
 
 @ObsoleteDescriptorBasedAPI
-class SerializationPluginContext(baseContext: IrPluginContext, val metadataPlugin: SerializationDescriptorSerializerPlugin?) :
+class ValueSerializationPluginContext(baseContext: IrPluginContext, val metadataPlugin: SerializationDescriptorSerializerPlugin?) :
     IrPluginContext by baseContext {
     lateinit var serialInfoImplJvmIrGenerator: SerialInfoImplJvmIrGenerator
 
     internal val copiedStaticWriteSelf: MutableMap<IrSimpleFunction, IrSimpleFunction> = ConcurrentHashMap()
+
+
 }
 
 
@@ -55,7 +57,7 @@ private class SerializerClassLowering(
     baseContext: IrPluginContext,
     metadataPlugin: SerializationDescriptorSerializerPlugin?
 ) : IrElementTransformerVoid(), ClassLoweringPass {
-    val context: SerializationPluginContext = SerializationPluginContext(baseContext, metadataPlugin)
+    val context: ValueSerializationPluginContext = ValueSerializationPluginContext(baseContext, metadataPlugin)
     private val serialInfoJvmGenerator = SerialInfoImplJvmIrGenerator(context).also { context.serialInfoImplJvmIrGenerator = it }
 
     override fun lower(irClass: IrClass) {

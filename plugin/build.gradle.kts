@@ -20,6 +20,10 @@ plugins {
     `maven-publish`
 }
 
+repositories {
+    mavenCentral()
+    mavenLocal()
+}
 
 group = projectGroup
 version = projectVersion
@@ -61,6 +65,15 @@ dependencies {
                 +"assertj-core"
             }
         }
+        "libetal"{
+            "kotlinx"{
+                "compiler"{
+                    "plugins"("1.0") {
+                        +"kcp"
+                    }
+                }
+            }
+        }
 
         "org.jetbrains.kotlinx"("+") {
             +"kotlinx-serialization-json"
@@ -69,14 +82,18 @@ dependencies {
 /*        "libetal.kotlinx.compiler.plugins"("1.0") {
             +"kcp"
         }*/
+
+        project {
+            +"annotations"
+        }
     }
 
     testImplementation(kotlin("test", kotlinVersion))
 }
 
-sourceSets{
-    main{
-        proto{
+sourceSets {
+    main {
+        proto {
 
         }
     }

@@ -18,13 +18,13 @@ import org.jetbrains.kotlin.ir.types.typeOrNull
 import org.jetbrains.kotlin.ir.util.constructors
 import org.jetbrains.kotlin.resolve.BindingContext
 import org.jetbrains.kotlin.resolve.descriptorUtil.fqNameSafe
-import org.jetbrains.kotlinx.serialization.compiler.extensions.SerializationPluginContext
+import org.jetbrains.kotlinx.serialization.compiler.extensions.ValueSerializationPluginContext
 import org.jetbrains.kotlinx.serialization.compiler.resolve.*
 
 @ObsoleteDescriptorBasedAPI
 class SerializerForInlineClassGenerator(
     irClass: IrClass,
-    compilerContext: SerializationPluginContext,
+    compilerContext: ValueSerializationPluginContext,
     bindingContext: BindingContext,
     serialInfoJvmGenerator: SerialInfoImplJvmIrGenerator,
 ) : SerializerIrGenerator(irClass, compilerContext, bindingContext, null, serialInfoJvmGenerator) {
