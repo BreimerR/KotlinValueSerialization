@@ -10,6 +10,7 @@ import org.jetbrains.kotlin.backend.common.lower.DeclarationIrBuilder
 import org.jetbrains.kotlin.backend.common.lower.irIfThen
 import org.jetbrains.kotlin.builtins.KotlinBuiltIns
 import org.jetbrains.kotlin.descriptors.*
+import org.jetbrains.kotlin.descriptors.annotations.Annotations
 import org.jetbrains.kotlin.ir.ObsoleteDescriptorBasedAPI
 import org.jetbrains.kotlin.ir.builders.*
 import org.jetbrains.kotlin.ir.builders.declarations.buildFun
@@ -62,11 +63,7 @@ interface IrBuilderExtension {
         return throwMissedFieldExceptionFunc != null && throwMissedFieldExceptionArrayFunc != null
     }
 
-    fun IrClass.contributeFunction(
-        descriptor: FunctionDescriptor,
-        ignoreWhenMissing: Boolean = false,
-        bodyGen: IrBlockBodyBuilder.(IrFunction) -> Unit
-    ) {
+    fun IrClass.contributeFunction(descriptor: FunctionDescriptor, ignoreWhenMissing: Boolean = false, bodyGen: IrBlockBodyBuilder.(IrFunction) -> Unit) {
         val f: IrSimpleFunction = searchForDeclaration(descriptor)
             ?: (if (ignoreWhenMissing) return else compilerContext.symbolTable.referenceSimpleFunction(descriptor).owner)
         f.body = DeclarationIrBuilder(compilerContext, f.symbol, this.startOffset, this.endOffset).irBlockBody(
@@ -81,8 +78,7 @@ interface IrBuilderExtension {
         overwriteValueParameters: Boolean = false,
         bodyGen: IrBlockBodyBuilder.(IrConstructor) -> Unit
     ) {
-        val c: IrConstructor =
-            searchForDeclaration(descriptor) ?: compilerContext.symbolTable.referenceConstructor(descriptor).owner
+        val c: IrConstructor = searchForDeclaration(descriptor) ?: compilerContext.symbolTable.referenceConstructor(descriptor).owner
         c.body = DeclarationIrBuilder(compilerContext, c.symbol, this.startOffset, this.endOffset).irBlockBody(
             this.startOffset,
             this.endOffset
@@ -102,11 +98,7 @@ interface IrBuilderExtension {
             origin = SERIALIZABLE_PLUGIN_ORIGIN
         }
         function.body =
-            DeclarationIrBuilder(compilerContext, function.symbol, startOffset, endOffset).irBlockBody(
-                startOffset,
-                endOffset,
-                bodyGen
-            )
+            DeclarationIrBuilder(compilerContext, function.symbol, startOffset, endOffset).irBlockBody(startOffset, endOffset, bodyGen)
         function.parent = this
 
         val f0Type = module.findClassAcrossModuleDependencies(ClassId.topLevel(FUNCTION0_FQ))!!.defaultType
@@ -132,8 +124,7 @@ interface IrBuilderExtension {
         val lazyFunctionSymbol = compilerContext.referenceFunctions(LAZY_FUNC_FQ).single {
             it.descriptor.valueParameters.size == 2 && it.descriptor.valueParameters[0].type == lazySafeModeClassDescriptor.defaultType
         }
-        val publicationEntryDescriptor =
-            lazySafeModeClassDescriptor.enumEntries().single { it.name == LAZY_PUBLICATION_MODE_NAME }
+        val publicationEntryDescriptor = lazySafeModeClassDescriptor.enumEntries().single { it.name == LAZY_PUBLICATION_MODE_NAME }
 
         val lazyIrClass = compilerContext.referenceClass(LAZY_FQ)!!.owner
         val lazyIrType = lazyIrClass.defaultType.substitute(mapOf(lazyIrClass.typeParameters[0].symbol to targetIrType))
@@ -159,13 +150,7 @@ interface IrBuilderExtension {
                 val lambdaExpression = containingClass.createLambdaExpression(targetIrType, initializerBuilder)
 
                 irExprBody(
-                    irInvoke(
-                        null,
-                        lazyFunctionSymbol,
-                        listOf(targetIrType),
-                        listOf(enumElement, lambdaExpression),
-                        lazyIrType
-                    )
+                    irInvoke(null, lazyFunctionSymbol, listOf(targetIrType), listOf(enumElement, lambdaExpression), lazyIrType)
                 )
             }
             backingField!!.initializer = initializerBody
@@ -198,19 +183,11 @@ interface IrBuilderExtension {
         factory.createAnonymousInitializer(startOffset, endOffset, SERIALIZABLE_PLUGIN_ORIGIN, symbol).also {
             it.parent = this
             declarations.add(it)
-            it.body = DeclarationIrBuilder(compilerContext, symbol, startOffset, endOffset).irBlockBody(
-                startOffset,
-                endOffset,
-                bodyGen
-            )
+            it.body = DeclarationIrBuilder(compilerContext, symbol, startOffset, endOffset).irBlockBody(startOffset, endOffset, bodyGen)
         }
     }
 
-    fun IrBlockBodyBuilder.getLazyValueExpression(
-        thisParam: IrValueParameter,
-        property: IrProperty,
-        type: IrType
-    ): IrExpression {
+    fun IrBlockBodyBuilder.getLazyValueExpression(thisParam: IrValueParameter, property: IrProperty, type: IrType): IrExpression {
         val lazyIrClass = compilerContext.referenceClass(LAZY_FQ)!!.owner
         val valueGetter = lazyIrClass.getPropertyGetter("value")!!
 
@@ -353,8 +330,7 @@ interface IrBuilderExtension {
     fun KotlinType.toIrType() = compilerContext.typeTranslator.translateType(this)
 
     // note: this method should be used only for properties from current module. Fields from other modules are private and inaccessible.
-    val SerializableProperty.irField: IrField?
-        get() = compilerContext.symbolTable.referenceField(this.descriptor).let { if (it.isBound) it.owner else null }
+    val SerializableProperty.irField: IrField get() = compilerContext.symbolTable.referenceField(this.descriptor).owner
 
     fun IrClass.searchForProperty(descriptor: PropertyDescriptor): IrProperty {
         // this API is used to reference both current module descriptors and external ones (because serializable class can be in any of them),
@@ -422,11 +398,7 @@ interface IrBuilderExtension {
             irGetField(receiver, property.backingField!!)
     }
 
-    fun IrBuilderWithScope.setProperty(
-        receiver: IrExpression,
-        property: IrProperty,
-        value: IrExpression
-    ): IrExpression {
+    fun IrBuilderWithScope.setProperty(receiver: IrExpression, property: IrProperty, value: IrExpression): IrExpression {
         return if (property.setter != null)
             irSet(property.setter!!.returnType, receiver, property.setter!!.symbol, value)
         else
@@ -441,8 +413,7 @@ interface IrBuilderExtension {
      */
 
     fun IrBuilderWithScope.generateAnySuperConstructorCall(toBuilder: IrBlockBodyBuilder) {
-        val anyConstructor =
-            compilerContext.irBuiltIns.anyClass.owner.declarations.single { it is IrConstructor } as IrConstructor
+        val anyConstructor = compilerContext.irBuiltIns.anyClass.owner.declarations.single { it is IrConstructor } as IrConstructor
         with(toBuilder) {
             +IrDelegatingConstructorCallImpl.fromSymbolDescriptor(
                 startOffset, endOffset,
@@ -513,12 +484,8 @@ interface IrBuilderExtension {
                 +irInvoke(
                     null,
                     throwMissedFieldExceptionArrayFunc!!,
-                    createPrimitiveArrayOfExpression(
-                        compilerContext.irBuiltIns.intType,
-                        goldenMaskList.indices.map { irGet(seenVars[it]) }),
-                    createPrimitiveArrayOfExpression(
-                        compilerContext.irBuiltIns.intType,
-                        goldenMaskList.map { irInt(it) }),
+                    createPrimitiveArrayOfExpression(compilerContext.irBuiltIns.intType, goldenMaskList.indices.map { irGet(seenVars[it]) }),
+                    createPrimitiveArrayOfExpression(compilerContext.irBuiltIns.intType, goldenMaskList.map { irInt(it) }),
                     serialDescriptor,
                     typeHint = compilerContext.irBuiltIns.unitType
                 )
@@ -536,18 +503,8 @@ interface IrBuilderExtension {
         val irProperty = propertyParent.searchForDeclaration<IrProperty>(propertyDescriptor) ?: run {
             with(propertyDescriptor) {
                 propertyParent.factory.createProperty(
-                    propertyParent.startOffset,
-                    propertyParent.endOffset,
-                    SERIALIZABLE_PLUGIN_ORIGIN,
-                    IrPropertySymbolImpl(propertyDescriptor),
-                    name,
-                    visibility,
-                    modality,
-                    isVar,
-                    isConst,
-                    isLateInit,
-                    isDelegated,
-                    isExternal
+                    propertyParent.startOffset, propertyParent.endOffset, SERIALIZABLE_PLUGIN_ORIGIN, IrPropertySymbolImpl(propertyDescriptor),
+                    name, visibility, modality, isVar, isConst, isLateInit, isDelegated, isExternal
                 ).also {
                     it.parent = propertyParent
                     propertyParent.addMember(it)
@@ -576,16 +533,8 @@ interface IrBuilderExtension {
         val field = with(propertyDescriptor) {
             // TODO: type parameters
             originProperty.factory.createField(
-                originProperty.startOffset,
-                originProperty.endOffset,
-                SERIALIZABLE_PLUGIN_ORIGIN,
-                IrFieldSymbolImpl(propertyDescriptor),
-                name,
-                type.toIrType(),
-                visibility,
-                !isVar,
-                isEffectivelyExternal(),
-                dispatchReceiverParameter == null
+                originProperty.startOffset, originProperty.endOffset, SERIALIZABLE_PLUGIN_ORIGIN, IrFieldSymbolImpl(propertyDescriptor), name, type.toIrType(),
+                visibility, !isVar, isEffectivelyExternal(), dispatchReceiverParameter == null
             )
         }
         field.apply {
@@ -609,21 +558,9 @@ interface IrBuilderExtension {
         } ?: run {
             with(descriptor) {
                 property.factory.createFunction(
-                    fieldSymbol.owner.startOffset,
-                    fieldSymbol.owner.endOffset,
-                    SERIALIZABLE_PLUGIN_ORIGIN,
-                    IrSimpleFunctionSymbolImpl(descriptor),
-                    name,
-                    visibility,
-                    modality,
-                    returnType!!.toIrType(),
-                    isInline,
-                    isEffectivelyExternal(),
-                    isTailrec,
-                    isSuspend,
-                    isOperator,
-                    isInfix,
-                    isExpect
+                    fieldSymbol.owner.startOffset, fieldSymbol.owner.endOffset, SERIALIZABLE_PLUGIN_ORIGIN, IrSimpleFunctionSymbolImpl(descriptor),
+                    name, visibility, modality, returnType!!.toIrType(),
+                    isInline, isEffectivelyExternal(), isTailrec, isSuspend, isOperator, isInfix, isExpect
                 )
             }.also { f ->
                 generateOverriddenFunctionSymbols(f, compilerContext.symbolTable)
@@ -674,8 +611,7 @@ interface IrBuilderExtension {
         irAccessor: IrSimpleFunction
     ): IrBlockBody {
         val property = setter.correspondingProperty
-        val irProperty = irAccessor.correspondingPropertySymbol?.owner
-            ?: error("Expected corresponding property for accessor $setter")
+        val irProperty = irAccessor.correspondingPropertySymbol?.owner ?: error("Expected corresponding property for accessor $setter")
         val startOffset = irAccessor.startOffset
         val endOffset = irAccessor.endOffset
         val irBody = irAccessor.factory.createBlockBody(startOffset, endOffset)
@@ -759,6 +695,11 @@ interface IrBuilderExtension {
         typeParameters = newTypeParameters
     }
 
+    fun kClassTypeFor(projection: TypeProjection): SimpleType {
+        val kClass = compilerContext.builtIns.kClass
+        return KotlinTypeFactory.simpleNotNullType(Annotations.EMPTY, kClass, listOf(projection))
+    }
+
     fun createClassReference(classType: KotlinType, startOffset: Int, endOffset: Int): IrClassReference {
         val clazz = classType.toClassDescriptor!!
         val classSymbol = compilerContext.referenceClass(clazz.fqNameSafe) ?: error("Couldn't load class $clazz")
@@ -806,8 +747,7 @@ interface IrBuilderExtension {
             else -> error("Unsupported classifier: $this")
         }
 
-    fun IrBuilderWithScope.classReference(classType: KotlinType): IrClassReference =
-        createClassReference(classType, startOffset, endOffset)
+    fun IrBuilderWithScope.classReference(classType: KotlinType): IrClassReference = createClassReference(classType, startOffset, endOffset)
 
     private fun extractDefaultValuesFromConstructor(irClass: IrClass?): Map<ParameterDescriptor, IrExpression?> {
         if (irClass == null) return emptyMap()
@@ -847,9 +787,10 @@ interface IrBuilderExtension {
             }
         }
         val defaultsMap = extractDefaultValuesFromConstructor(irClass)
-
         return fun(initializer: IrExpressionBody): IrExpression {
+            // val identifier = rawExpression
             val rawExpression = initializer.expression
+
             val expression =
                 if (rawExpression is IrGetValueImpl && rawExpression.origin == IrStatementOrigin.INITIALIZE_PROPERTY_FROM_PARAMETER) {
                     // this is a primary constructor property, use corresponding default of value parameter
@@ -885,9 +826,8 @@ interface IrBuilderExtension {
 
             if (compilerContext.platform.isJvm()) {
                 val implClass = compilerContext.serialInfoImplJvmIrGenerator.getImplClass(annotationClass)
-                val ctor =
-                    implClass.constructors.singleOrNull { it.valueParameters.size == annotationCall.valueArgumentsCount }
-                        ?: error("No constructor args found for SerialInfo annotation Impl class: ${implClass.render()}")
+                val ctor = implClass.constructors.singleOrNull { it.valueParameters.size == annotationCall.valueArgumentsCount }
+                    ?: error("No constructor args found for SerialInfo annotation Impl class: ${implClass.render()}")
                 irCall(ctor).apply {
                     for (i in 0 until annotationCall.valueArgumentsCount) {
                         val argument = annotationCall.getValueArgument(i)
@@ -947,11 +887,7 @@ interface IrBuilderExtension {
     }
 
 
-    fun wrapIrTypeIntoKSerializerIrType(
-        module: ModuleDescriptor,
-        type: IrType,
-        variance: Variance = Variance.INVARIANT
-    ): IrType {
+    fun wrapIrTypeIntoKSerializerIrType(module: ModuleDescriptor, type: IrType, variance: Variance = Variance.INVARIANT): IrType {
         val serializerFqn = getSerializationPackageFqn(SerialEntityNames.KSERIALIZER_CLASS)
         val kSerClass = compilerContext.referenceClass(serializerFqn) ?: error("Couldn't find class $serializerFqn")
         return IrSimpleTypeImpl(
@@ -1024,9 +960,7 @@ interface IrBuilderExtension {
                 typeArgs = listOf(thisIrType)
 
                 val hasNewCtxSerCtor =
-                    serializerClassOriginal.classId == contextSerializerId && compilerContext.referenceConstructors(
-                        serializerClass.fqNameSafe
-                    )
+                    serializerClassOriginal.classId == contextSerializerId && compilerContext.referenceConstructors(serializerClass.fqNameSafe)
                         .any { it.owner.valueParameters.size == 3 }
 
                 if (hasNewCtxSerCtor) {
@@ -1067,13 +1001,10 @@ interface IrBuilderExtension {
                         kType.toClassDescriptor!!,
                         module
                     )
-                    val projectedOutCurrentKClass =
-                        compilerContext.irBuiltIns.kClassClass.typeWithArguments(
-                            listOf(makeTypeProjection(thisIrType, Variance.OUT_VARIANCE))
-                        )
+                    val projectedOutCurrentKClass = kClassTypeFor(TypeProjectionImpl(Variance.OUT_VARIANCE, kType))
                     add(
                         createArrayOfExpression(
-                            projectedOutCurrentKClass,
+                            projectedOutCurrentKClass.toIrType(),
                             subclasses.map { classReference(it) }
                         )
                     )
@@ -1163,26 +1094,18 @@ interface IrBuilderExtension {
         assert(ctor.isBound)
         val ctorDecl = ctor.owner
         if (needToCopyAnnotations) {
-            val classAnnotations =
-                copyAnnotationsFrom(thisIrType.getClass()?.let { collectSerialInfoAnnotations(it) }.orEmpty())
+            val classAnnotations = copyAnnotationsFrom(thisIrType.getClass()?.let { collectSerialInfoAnnotations(it) }.orEmpty())
             args = args + createArrayOfExpression(compilerContext.builtIns.annotationType.toIrType(), classAnnotations)
         }
 
         val typeParameters = ctorDecl.parentAsClass.typeParameters
         val substitutedReturnType = ctorDecl.returnType.substitute(typeParameters, typeArgs)
-        return irInvoke(
-            null,
-            ctor,
-            typeArguments = typeArgs,
-            valueArguments = args,
-            returnTypeHint = substitutedReturnType
-        )
+        return irInvoke(null, ctor, typeArguments = typeArgs, valueArguments = args, returnTypeHint = substitutedReturnType)
     }
 
     fun collectSerialInfoAnnotations(irClass: IrClass): List<IrConstructorCall> {
         if (!(irClass.isInterface || irClass.descriptor.hasSerializableAnnotation)) return emptyList()
-        val annotationByFq: MutableMap<FqName, IrConstructorCall> =
-            irClass.annotations.associateBy { it.symbol.owner.parentAsClass.descriptor.fqNameSafe }.toMutableMap()
+        val annotationByFq: MutableMap<FqName, IrConstructorCall> = irClass.annotations.associateBy { it.symbol.owner.parentAsClass.descriptor.fqNameSafe }.toMutableMap()
         for (clazz in irClass.getAllSuperclasses()) {
             val annotations = clazz.annotations
                 .mapNotNull {
@@ -1213,8 +1136,7 @@ interface IrBuilderExtension {
 
         val adjustedArgs: List<IrExpression> =
             if (baseClass.descriptor.isSealed() || baseClass.descriptor.modality == Modality.ABSTRACT) {
-                val serializer =
-                    findStandardKotlinTypeSerializer(baseClass.module, context.irBuiltIns.unitType.toKotlinType())!!
+                val serializer = findStandardKotlinTypeSerializer(baseClass.module, context.irBuiltIns.unitType.toKotlinType())!!
                 // workaround for sealed and classes - the `serializer` function expects non-null serializers, but does not use them, so serializers of any type can be passed
                 List(baseClass.typeParameters.size) { irGetObject(serializer) }
             } else {
@@ -1243,9 +1165,8 @@ interface IrBuilderExtension {
             // "Byte::class" -> "java.lang.Byte::class"
             val wrapperFqName = KotlinBuiltIns.getPrimitiveType(classType)?.let(JvmPrimitiveType::get)?.wrapperFqName
             if (wrapperFqName != null) {
-                val wrapperClass =
-                    compilerContext.moduleDescriptor.findClassAcrossModuleDependencies(ClassId.topLevel(wrapperFqName))
-                        ?: error("Primitive wrapper class for $classType not found: $wrapperFqName")
+                val wrapperClass = compilerContext.moduleDescriptor.findClassAcrossModuleDependencies(ClassId.topLevel(wrapperFqName))
+                    ?: error("Primitive wrapper class for $classType not found: $wrapperFqName")
                 return classReference(wrapperClass.defaultType)
             }
         }
@@ -1253,9 +1174,8 @@ interface IrBuilderExtension {
     }
 
     private fun findSerializerConstructorForTypeArgumentsSerializers(serializer: ClassDescriptor): IrConstructorSymbol? {
-        val serializableImplementationTypeArguments =
-            extractKSerializerArgumentFromImplementation(serializer)?.arguments
-                ?: throw AssertionError("Serializer does not implement KSerializer??")
+        val serializableImplementationTypeArguments = extractKSerializerArgumentFromImplementation(serializer)?.arguments
+            ?: throw AssertionError("Serializer does not implement KSerializer??")
 
         val typeParamsCount = serializableImplementationTypeArguments.size
         if (typeParamsCount == 0) return null //don't need it
@@ -1351,33 +1271,22 @@ interface IrBuilderExtension {
                 // emit call right away
                 +elementCall
             } else {
-                val field = property.irField ?: throw Exception("Support for nullable field not yet available HELP needed.")
+                val partB = irNotEquals(property.irGet(), initializerAdapter(property.irField.initializer!!))
 
-                field.initializer?.let { fieldInitializer ->
-
-                    val partB = initializerAdapter(fieldInitializer)
-
-                    val condition = if (encodeDefaults == false) {
-                        // drop default without call to .shouldEncodeElementDefault
-                        partB
-                    } else {
-                        // emit check:
-                        // if (if (output.shouldEncodeElementDefault(this.descriptor, i)) true else {obj.prop != DEFAULT_VALUE} ) {
-                        //    output.encodeIntElement(this.descriptor, i, obj.prop)// block {obj.prop != DEFAULT_VALUE} may contain several statements
-                        val shouldEncodeFunc =
-                            kOutputClass.referenceFunctionSymbol(CallingConventions.shouldEncodeDefault)
-                        val partA =
-                            irInvoke(irGet(localOutput), shouldEncodeFunc, irGet(localSerialDesc), irInt(index))
-                        // Ir infrastructure does not have dedicated symbol for ||, so
-                        //  `a || b == if (a) true else b`, see org.jetbrains.kotlin.ir.builders.PrimitivesKt.oror
-                        irIfThenElse(compilerContext.irBuiltIns.booleanType, partA, irTrue(), partB)
-                    }
-                    +irIfThen(condition, elementCall)
-
-
+                val condition = if (encodeDefaults == false) {
+                    // drop default without call to .shouldEncodeElementDefault
+                    partB
+                } else {
+                    // emit check:
+                    // if (if (output.shouldEncodeElementDefault(this.descriptor, i)) true else {obj.prop != DEFAULT_VALUE} ) {
+                    //    output.encodeIntElement(this.descriptor, i, obj.prop)// block {obj.prop != DEFAULT_VALUE} may contain several statements
+                    val shouldEncodeFunc = kOutputClass.referenceFunctionSymbol(CallingConventions.shouldEncodeDefault)
+                    val partA = irInvoke(irGet(localOutput), shouldEncodeFunc, irGet(localSerialDesc), irInt(index))
+                    // Ir infrastructure does not have dedicated symbol for ||, so
+                    //  `a || b == if (a) true else b`, see org.jetbrains.kotlin.ir.builders.PrimitivesKt.oror
+                    irIfThenElse(compilerContext.irBuiltIns.booleanType, partA, irTrue(), partB)
                 }
-
-
+                +irIfThen(condition, elementCall)
             }
         }
     }
@@ -1390,8 +1299,7 @@ interface IrBuilderExtension {
     fun IrProperty.getEncodeDefaultAnnotationValue(): Boolean? {
         val call = annotations.findAnnotation(SerializationAnnotations.encodeDefaultFqName) ?: return null
         val arg = call.getValueArgument(0) ?: return true // ALWAYS by default
-        val argValue = (arg as? IrGetEnumValue
-            ?: error("Argument of enum constructor expected to implement IrGetEnumValue, got $arg")).symbol.owner.name.toString()
+        val argValue = (arg as? IrGetEnumValue ?: error("Argument of enum constructor expected to implement IrGetEnumValue, got $arg")).symbol.owner.name.toString()
         return when (argValue) {
             "ALWAYS" -> true
             "NEVER" -> false
@@ -1418,19 +1326,9 @@ interface IrBuilderExtension {
             property.genericIndex,
             genericGetter
         )
-        val (functionToCall, args: List<IrExpression>) = if (innerSerial != null) whenHaveSerializer(
-            innerSerial,
-            sti
-        ) else whenDoNot(sti)
-        val typeArgs =
-            if (functionToCall.descriptor.typeParameters.isNotEmpty()) listOf(property.type.toIrType()) else listOf()
-        return irInvoke(
-            encoder,
-            functionToCall,
-            typeArguments = typeArgs,
-            valueArguments = args,
-            returnTypeHint = returnTypeHint
-        )
+        val (functionToCall, args: List<IrExpression>) = if (innerSerial != null) whenHaveSerializer(innerSerial, sti) else whenDoNot(sti)
+        val typeArgs = if (functionToCall.descriptor.typeParameters.isNotEmpty()) listOf(property.type.toIrType()) else listOf()
+        return irInvoke(encoder, functionToCall, typeArguments = typeArgs, valueArguments = args, returnTypeHint = returnTypeHint)
     }
 
 }
