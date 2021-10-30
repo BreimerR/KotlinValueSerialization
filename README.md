@@ -29,3 +29,6 @@ dependencies{
 
 ```
 
+
+## Drawbacks
+Code insight isn't available yet. I don't know how to integrate it yet 😅
