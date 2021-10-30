@@ -1,6 +1,6 @@
 rootProject.name = "KotlinValueSerialization"
 
 
-include(":plugin")
-project(":plugin").name = "kotlinx-serialization"
+include(":value-serialization")
 include(":annotations")
+include(":gradle-plugin")

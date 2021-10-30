@@ -2,12 +2,13 @@ plugins {
     `kotlin-dsl`
 }
 
+
 repositories {
     mavenCentral()
     mavenLocal()
-
 }
 
 dependencies {
-    implementation("libetal.gradle.plugins:libBuildSrc:1.4")
+    implementation("libetal.gradle.plugins:libBuildSrc:1.5")
+
 }

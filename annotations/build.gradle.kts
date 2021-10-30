@@ -1,4 +1,5 @@
 val jvmTarget: String by project
+val kotlinVersion: String by project
 val projectGroup: String by project
 val projectVersion: String by project
 
@@ -40,7 +41,6 @@ kotlin {
         else -> throw GradleException("Host OS is not supported in Kotlin/Native.")
     }
 
-
     sourceSets {
         val commonMain by getting
         val jvmMain by getting
@@ -51,5 +51,13 @@ kotlin {
         }
         val jsMain by getting
         val nativeMain by getting
+    }
+}
+
+
+configurations.all {
+    resolutionStrategy.eachDependency {
+        if(requested.group == "org.jetbrains.kotlin")
+            useVersion(kotlinVersion)
     }
 }

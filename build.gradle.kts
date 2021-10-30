@@ -1,5 +1,3 @@
-import libetal.gradle.implementation
-
 val kotlinVersion: String by project
 val dokkaVersion: String by project
 val projectGroup: String by project
@@ -23,17 +21,8 @@ buildscript {
     dependencies {
         classpath(kotlin("gradle-plugin", kotlinVersion))
         classpath("org.jetbrains.dokka:dokka-gradle-plugin:$dokkaVersion")
-        classpath(kotlin("serialization", kotlinVersion))
     }
 }
-
-configurations.all {
-    resolutionStrategy {
-        force( "org.jetbrains.kotlin:kotlin-reflect:$kotlinVersion")
-        force( "org.jetbrains.kotlin:kotlin-stdlib :$kotlinVersion")
-    }
-}
-
 
 allprojects {
     repositories {
@@ -41,3 +30,6 @@ allprojects {
         mavenLocal()
     }
 }
+
+
+
