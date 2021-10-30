@@ -14,4 +14,4 @@
 # limitations under the License.
 #
 
-org.jetbrains.kotlinx.serialization.compiler.extensions.SerializationComponentRegistrar
+libetal.kotlinx.serialization.compiler.extensions.SerializationComponentRegistrar
