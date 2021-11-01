@@ -31,6 +31,8 @@ import libetal.kotlinx.serialization.compiler.resolve.SerialEntityNames.SINGLE_M
 import libetal.kotlinx.serialization.compiler.resolve.classSerializer
 import libetal.kotlinx.serialization.compiler.resolve.isAbstractOrSealedSerializableClass
 import libetal.kotlinx.serialization.compiler.resolve.isInternalSerializable
+import org.jetbrains.kotlin.js.descriptorUtils.getJetTypeFqName
+import org.jetbrains.kotlin.resolve.descriptorUtil.fqNameSafe
 import org.jetbrains.org.objectweb.asm.Label
 import org.jetbrains.org.objectweb.asm.Opcodes
 import org.jetbrains.org.objectweb.asm.Type

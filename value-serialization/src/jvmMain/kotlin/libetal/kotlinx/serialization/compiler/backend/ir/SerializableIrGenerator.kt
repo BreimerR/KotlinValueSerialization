@@ -136,44 +136,49 @@ class SerializableIrGenerator(
                 else -> generateSuperNonSerializableCall(superClass)
             }
 
+            // TODO check if delegates can be solved for from here
             statementsAfterSerializableProperty[null]?.forEach { +it }
             for (index in startPropOffset until serializableProperties.size) {
                 val prop = serializableProperties[index]
                 val paramRef = ctor.valueParameters[index + seenVarsOffset]
                 // Assign this.a = a in else branch
                 // Set field directly w/o setter to match behavior of old backend plugin
-                val backingFieldToAssign = prop.getIrPropertyFrom(irClass).backingField!!
-                val assignParamExpr = irSetField(irGet(thiz), backingFieldToAssign, irGet(paramRef))
+                val backingFieldToAssign = prop.getIrPropertyFrom(irClass).backingField
 
-                val ifNotSeenExpr: IrExpression = if (prop.optional) {
-                    val initializerBody =
-                        requireNotNull(initializerAdapter(prop.irField.initializer!!)) { "Optional value without an initializer" } // todo: filter abstract here
-                    irSetField(irGet(thiz), backingFieldToAssign, initializerBody)
-                } else {
-                    // property required
-                    if (useFieldMissingOptimization()) {
-                        // field definitely not empty as it's checked before - no need another IF, only assign property from param
-                        +assignParamExpr
-                        statementsAfterSerializableProperty[prop.descriptor]?.forEach { +it }
-                        continue
+                if(backingFieldToAssign != null){
+                    val assignParamExpr = irSetField(irGet(thiz), backingFieldToAssign, irGet(paramRef))
+
+                    val ifNotSeenExpr: IrExpression = if (prop.optional) {
+                        val initializerBody =
+                            requireNotNull(initializerAdapter(prop.irField.initializer!!)) { "Optional value without an initializer" } // todo: filter abstract here
+                        irSetField(irGet(thiz), backingFieldToAssign, initializerBody)
                     } else {
-                        irThrow(irInvoke(null, exceptionCtorRef, irString(prop.name), typeHint = exceptionType))
+                        // property required
+                        if (useFieldMissingOptimization()) {
+                            // field definitely not empty as it's checked before - no need another IF, only assign property from param
+                            +assignParamExpr
+                            statementsAfterSerializableProperty[prop.descriptor]?.forEach { +it }
+                            continue
+                        } else {
+                            irThrow(irInvoke(null, exceptionCtorRef, irString(prop.name), typeHint = exceptionType))
+                        }
                     }
+
+                    val propNotSeenTest =
+                        irEquals(
+                            irInt(0),
+                            irBinOp(
+                                OperatorNameConventions.AND,
+                                irGet(seenVars[bitMaskSlotAt(index)]),
+                                irInt(1 shl (index % 32))
+                            )
+                        )
+
+                    +irIfThenElse(compilerContext.irBuiltIns.unitType, propNotSeenTest, ifNotSeenExpr, assignParamExpr)
+
+                    statementsAfterSerializableProperty[prop.descriptor]?.forEach { +it }
                 }
 
-                val propNotSeenTest =
-                    irEquals(
-                        irInt(0),
-                        irBinOp(
-                            OperatorNameConventions.AND,
-                            irGet(seenVars[bitMaskSlotAt(index)]),
-                            irInt(1 shl (index % 32))
-                        )
-                    )
-
-                +irIfThenElse(compilerContext.irBuiltIns.unitType, propNotSeenTest, ifNotSeenExpr, assignParamExpr)
-
-                statementsAfterSerializableProperty[prop.descriptor]?.forEach { +it }
             }
         }
 
