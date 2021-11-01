@@ -25,7 +25,7 @@ import org.jetbrains.kotlin.serialization.deserialization.getName
 import libetal.kotlinx.serialization.compiler.diagnostic.SERIALIZABLE_PROPERTIES
 import libetal.kotlinx.serialization.compiler.extensions.SerializationDescriptorSerializerPlugin
 import libetal.kotlinx.serialization.compiler.extensions.SerializationPluginMetadataExtension
-import java.lang.Exception
+
 
 class SerializableProperties(private val serializableClass: ClassDescriptor, val bindingContext: BindingContext) {
     private val primaryConstructorParameters: List<ValueParameterDescriptor> =
@@ -72,7 +72,7 @@ class SerializableProperties(private val serializableClass: ClassDescriptor, val
 
         val mutableSerializableProperties  = mutableListOf<SerializableProperty>()
 
-        descriptorsSequence.annotatedWith<Serialize> { annotationDescriptor, declarationDescriptor ->
+        descriptorsSequence.annotatedWith<Serialize> { _, declarationDescriptor ->
             when (declarationDescriptor) {
                 is PropertyDescriptor -> {
                     val declaresDefaultValue = declarationDescriptor.declaresDefaultValue()
@@ -94,12 +94,13 @@ class SerializableProperties(private val serializableClass: ClassDescriptor, val
         serializableProperties =  mutableSerializableProperties.partition { primaryConstructorProperties.contains(it.descriptor)  }
             .run {
                 val supers = serializableClass.getSuperClassNotAny()
+
                 if (supers == null || !supers.isInternalSerializable)
                     first + second
                 else
                     SerializableProperties(supers, bindingContext).serializableProperties + first + second
-            }
-            .let { unsort(serializableClass, it) }
+            }.let { unsort(serializableClass, it) }
+
 
         isExternallySerializable =
             serializableClass.isInternallySerializableEnum() || primaryConstructorParameters.size == primaryConstructorProperties.size

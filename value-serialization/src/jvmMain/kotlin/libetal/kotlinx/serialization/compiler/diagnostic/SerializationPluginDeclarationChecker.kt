@@ -238,6 +238,7 @@ open class SerializationPluginDeclarationChecker : DeclarationChecker {
         if (descriptor.hasCompanionObjectAsSerializer) return null // customized by user
 
         val props = SerializableProperties(descriptor, trace.bindingContext)
+
         if (!props.isExternallySerializable) trace.reportOnSerializableAnnotation(
             descriptor,
             SerializationErrors.PRIMARY_CONSTRUCTOR_PARAMETER_IS_NOT_A_PROPERTY

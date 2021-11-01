@@ -5,6 +5,7 @@
 
 package libetal.kotlinx.serialization.compiler.backend.common
 
+import libetal.kotlinx.serialization.annotations.Serialize
 import libetal.kotlinx.serialization.compiler.resolve.*
 import libetal.kotlinx.serialization.compiler.resolve.checkSerializableClassPropertyResult
 import libetal.kotlinx.serialization.compiler.resolve.getSerializableClassDescriptorBySerializer
@@ -30,7 +31,7 @@ abstract class SerializerCodegen(
 
     private fun checkSerializability() {
         check(properties.isExternallySerializable) {
-            "Class ${serializableDescriptor.name} have constructor parameters which are not properties and therefore it is not serializable automatically"
+            "Class ${serializableDescriptor.name} doesn't have any property annotated with ${Serialize::class.qualifiedName}"
         }
     }
 

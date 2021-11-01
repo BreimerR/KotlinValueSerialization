@@ -48,11 +48,11 @@ class SerialInfoCodegenImpl(val codegen: ImplementationBodyCodegen, val thisClas
                                propFieldName, propType.descriptor, null, null)
             val f = SimpleFunctionDescriptorImpl.create(thisClass, Annotations.EMPTY, prop.name, CallableMemberDescriptor.Kind.SYNTHESIZED, thisClass.source)
             f.initialize(null, thisClass.thisAsReceiverParameter, emptyList(), emptyList(), prop.type, Modality.FINAL, DescriptorVisibilities.PUBLIC)
-            codegen.generateMethod(f, { _, _ ->
+            codegen.generateMethod(f) { _, _ ->
                 load(0, thisAsmType)
                 getfield(thisAsmType.internalName, propFieldName, propType.descriptor)
                 areturn(propType)
-            })
+            }
         }
     }
 
@@ -75,7 +75,7 @@ class SerialInfoCodegenImpl(val codegen: ImplementationBodyCodegen, val thisClas
 
         constr.returnType = thisClass.defaultType
 
-        codegen.generateMethod(constr, { _, _ ->
+        codegen.generateMethod(constr) { _, _ ->
             load(0, thisAsmType)
             invokespecial("java/lang/Object", "<init>", "()V", false)
             var varOffset = 1
@@ -88,7 +88,7 @@ class SerialInfoCodegenImpl(val codegen: ImplementationBodyCodegen, val thisClas
                 varOffset += propType.size
             }
             areturn(Type.VOID_TYPE)
-        })
+        }
     }
 
     companion object {

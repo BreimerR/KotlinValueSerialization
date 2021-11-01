@@ -32,6 +32,7 @@ kotlin {
             }
         }
     }
+
     val hostOs = System.getProperty("os.name")
     val isMingwX64 = hostOs.startsWith("Windows")
     val nativeTarget = when {
@@ -57,7 +58,7 @@ kotlin {
 
 configurations.all {
     resolutionStrategy.eachDependency {
-        if(requested.group == "org.jetbrains.kotlin")
+        if (requested.group == "org.jetbrains.kotlin")
             useVersion(kotlinVersion)
     }
 }

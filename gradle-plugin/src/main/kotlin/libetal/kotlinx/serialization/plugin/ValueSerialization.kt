@@ -26,7 +26,7 @@ KotlinGradleSubplugin<AbstractCompile> {
         kotlinCompilation.target.project.provider { emptyList() }
 
     override fun getPluginArtifact(): SubpluginArtifact =
-        SubpluginArtifact(SERIALIZATION_GROUP_NAME, SERIALIZATION_ARTIFACT_NAME, "1.5.30")
+        SubpluginArtifact(SERIALIZATION_GROUP_NAME, SERIALIZATION_ARTIFACT_NAME, "1.5.31")
 
     /*  override fun getPluginArtifactForNative(): SubpluginArtifact =
           SubpluginArtifact(SERIALIZATION_GROUP_NAME, SERIALIZATION_ARTIFACT_UNSHADED_NAME)*/
