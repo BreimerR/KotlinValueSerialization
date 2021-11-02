@@ -800,7 +800,7 @@ interface IrBuilderExtension {
             val expression =
                 if (rawExpression is IrGetValueImpl && rawExpression.origin == IrStatementOrigin.INITIALIZE_PROPERTY_FROM_PARAMETER) {
                     // this is a primary constructor property, use corresponding default of value parameter
-                    defaultsMap.getValue(rawExpression.symbol.descriptor as ParameterDescriptor) ?: rawExpression
+                  /*  defaultsMap.getValue(rawExpression.symbol.descriptor as ParameterDescriptor) ?:*/ rawExpression
                 } else {
                     rawExpression
                 }
